@@ -70,4 +70,4 @@ streamlit run dashboard/app.py
 - **Chronological train/test split** — avoids data leakage that would occur with a random split on time-series data
 - **Baseline comparison** — model is evaluated against climatology (historical average) to demonstrate actual predictive skill
 
-![ER Diagram](docs/climateml-er.png)
+![ER Diagram](assets/climateml-er.jpg)
