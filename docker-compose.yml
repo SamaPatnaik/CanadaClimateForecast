@@ -1,7 +1,5 @@
-version: "4.81"
-
 services: 
-  db: 
+  postgres: 
     image: postgres:latest
     container_name: climate_db
     restart: unless-stopped
@@ -25,3 +23,5 @@ services:
       - "5050:80" # default pgadmin port
     depends_on:
       - postgres
+volumes:
+  postgres_data:
