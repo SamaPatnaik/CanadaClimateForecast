@@ -1,6 +1,6 @@
-# Canadian Climate ML — Data Warehouse + Prediction API
+# Canadian Climate ML
 
-End-to-end data science project: NOAA GHCN-Daily weather data → Postgres star schema → SQL feature engineering → XGBoost regression → FastAPI serving.
+In this end to end data science project, I explore NOAA GHCN-Daily weather data → Postgres star schema → SQL feature engineering → XGBoost regression → FastAPI serving.
 
 **Predicts next-day maximum temperature** for Canadian weather stations using historical climate observations.
 
@@ -65,7 +65,9 @@ streamlit run dashboard/app.py
 
 ## Key design decisions
 
-- **Star schema** (fact + dimension tables) rather than a flat table — mirrors production data warehouse patterns
+- **Star schema** (fact + dimension tables) rather than a flat table 
 - **Feature engineering in SQL** (window functions, LAG, rolling aggregates) rather than pandas — SQL handles this more efficiently at scale and is closer to how real pipelines work
 - **Chronological train/test split** — avoids data leakage that would occur with a random split on time-series data
 - **Baseline comparison** — model is evaluated against climatology (historical average) to demonstrate actual predictive skill
+
+![ER Diagram](docs/er_diagram.png)
