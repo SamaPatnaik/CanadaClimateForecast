@@ -1,6 +1,6 @@
 services: 
   postgres: 
-    image: postgres:latest
+    image: postgres:16
     container_name: climate_db
     restart: unless-stopped
     environment: 
@@ -8,10 +8,10 @@ services:
       POSTGRES_PASSWORD: climate123
       POSTGRES_DB: climate_dw
     ports: 
-      - "5432:5432" #default postgres port
+      - "5433:5432" #default postgres port
     volumes:
       - postgres_data:/var/lib/postgresql/data #maps our database to docker default vol so that data persists during restart.
-      - ./sql/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql #runs the schema sql file on the first run of the container to create the database schema.
+      - ./sql/schema/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql #runs the schema sql file on the first run of the container to create the database schema.
   pgadmin: 
     image: dpage/pgadmin4:latest
     container_name: climate_pgadmin
