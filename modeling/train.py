@@ -13,7 +13,7 @@ from sklearn.metrics import (
 )
 from xgboost import XGBClassifier
 
-#Config
+#add this to config.py
 DB_URL = "postgresql://climate:climate123@localhost:5433/climate_dw"
 MODELS_DIR = Path("modeling/saved_models")
 MODELS_DIR.mkdir(parents=True, exist_ok=True)

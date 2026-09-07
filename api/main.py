@@ -111,6 +111,7 @@ def predict(station_id: str, date: str):
 
     #build feature vector in the right column order
     features = pd.DataFrame([{col: row[col] for col in FEATURE_COLS}])
+    features = features.astype("float32")
 
     #get probability from model
     prob = float(model.predict_proba(features)[0][1])
