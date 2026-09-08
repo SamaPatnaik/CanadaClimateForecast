@@ -4,6 +4,7 @@ import pandas as pd
 from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from sqlalchemy import Date, create_engine, text
+from typing import Optional
 
 # add this to config.py 
 DB_URL = "postgresql://climate:climate123@localhost:5433/climate_dw"
@@ -42,7 +43,7 @@ def health():
     }
 
 @app.get("/stations")
-def get_stations(province):
+def get_stations(province: Optional[str] = None):
     query = """
     SELECT 
             s.station_id,
