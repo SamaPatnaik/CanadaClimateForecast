@@ -1,5 +1,5 @@
 # ignore the data folder because that can get large, .pyc* files and __pycache__ 
-data\ 
+data/
 __pycache__/
 .env 
 *.py[cod]

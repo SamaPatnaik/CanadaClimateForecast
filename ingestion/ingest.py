@@ -222,11 +222,13 @@ def upsert_observations(conn, rows):
     conn.commit()
 
 
-#refresh the features_daily materialized view
+#refresh the features_daily_base materialized view
+#(features_daily / features_latest are plain views on top of it, so they
+# update automatically once this refresh completes)
 def refresh_features(conn):
-    print("  Refreshing features_daily materialized view...")
+    print("  Refreshing features_daily_base materialized view...")
     with conn.cursor() as cur:
-        cur.execute("REFRESH MATERIALIZED VIEW features_daily;")
+        cur.execute("REFRESH MATERIALIZED VIEW features_daily_base;")
     conn.commit()
     print("  Done.")
 
