@@ -336,13 +336,13 @@ def render_station_picker(stations_df: pd.DataFrame, key_prefix: str,
 def render_sidebar(num_fresh_stations: int, num_all_stations: int):
     st.sidebar.title("Canadian Extreme Heat Predictor")
     st.sidebar.markdown(
-        "Predicts extreme-heat risk and expected daily high temperatures "
-        "1-3 days ahead for Canadian weather stations, using an XGBoost "
+        "Predicts extreme heat risk and expected daily high temperatures "
+        "1 to 3 days ahead for Canadian weather stations, using an XGBoost "
         "model trained on decades of historical climate records."
     )
     st.sidebar.markdown("---")
     st.sidebar.caption(
-        "Model: XGBoost | Data: NOAA GHCN-Daily + ECCC near-real-time obs\n\n"
+        "Model: XGBoost |\n Data: NOAA GHCN Daily and ECCC near real time obs\n\n"
         f"Live Forecast covers the {num_fresh_stations} stations that have "
         f"reported within the last {FORECAST_MAX_AGE_DAYS} days and have "
         f"{MIN_HISTORY_YEARS}+ years of history. "
@@ -380,7 +380,7 @@ def render_window_card(window: dict):
 #show_actual=False (Live Forecast) shows the regressor's predicted temperature.
 def render_horizon_strip(horizons: list, show_actual: bool = True,
                           mae_by_horizon: dict = None):
-    st.markdown("#### Day-by-day outlook")
+    st.markdown("#### Day by day Outlook")
     cols = st.columns(len(horizons))
     for col, h in zip(cols, horizons):
         prob = h["probability"]
@@ -478,12 +478,12 @@ def render_history_chart(history_df: pd.DataFrame,
         ))
 
     fig.update_layout(
-        title="60-day temperature history + 3-day outlook",
+        title="60 day temperature history and 3 day outlook",
         xaxis_title="Date",
         yaxis_title="Max Temperature (°C)",
-        legend=dict(orientation="h", y=-0.2),
-        height=350,
-        margin=dict(t=40, b=40)
+        legend=dict(orientation="h", y=-0.35, yanchor="top"),
+        height=380,
+        margin=dict(t=40, b=90)
     )
 
     st.plotly_chart(fig, use_container_width=True)
@@ -540,7 +540,7 @@ def render_forecast_tab(fresh_stations_df: pd.DataFrame):
     age_msg = (f"Latest data for **{station_name}**: **{as_of_date}** "
                f"({age} day{'s' if age != 1 else ''} old)")
     if age > 5:
-        st.warning(age_msg + " — this station hasn't reported recently; "
+        st.warning(age_msg + "This station hasn't reported recently; "
                    "the forecast below is only as current as this date.")
     else:
         st.info(age_msg)
