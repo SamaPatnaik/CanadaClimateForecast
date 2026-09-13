@@ -1,3 +1,4 @@
+import os
 import json
 import streamlit as st
 import pandas as pd
@@ -8,8 +9,22 @@ from pathlib import Path
 from datetime import date, datetime
 from sqlalchemy import create_engine, text
 
-API_URL = "http://localhost:8000"
-DB_URL = "postgresql://climate:climate123@localhost:5433/climate_dw"
+
+#reads st.secrets first (how Streamlit Community Cloud's secrets UI works),
+#falling back to a plain env var, then a local-dev default - so the same
+#code runs unchanged locally and once deployed.
+def get_config(key: str, default: str) -> str:
+    try:
+        return st.secrets[key]
+    except Exception:
+        return os.environ.get(key, default)
+
+
+API_URL = get_config("API_URL", "http://localhost:8000")
+DB_URL = get_config(
+    "DATABASE_URL",
+    "postgresql://climate:climate123@localhost:5433/climate_dw"
+)
 REGRESSOR_METRICS_PATH = (Path(__file__).resolve().parent.parent
                            / "modeling" / "saved_models"
                            / "xgb_tmax_regressor_h3_metrics.json")
@@ -35,7 +50,7 @@ MAP_DEFAULT_ZOOM = 2.8
 #page config
 st.set_page_config(
     page_title="Canadian Extreme Heat Predictor",
-    page_icon="🌡️",
+    page_icon=None,
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -45,11 +60,15 @@ st.set_page_config(
 #sits over the main content, not the sidebar, so equal padding alone would
 #leave the two misaligned - hide that header entirely, then give both
 #panels the same small top padding so the title and tabs line up.
+#the sidebar title uses the same orange-red as Streamlit's active-tab
+#indicator (its default theme's primaryColor, #FF4B4B - no custom theme
+#is configured in this project, so that's the color actually shown)
 st.markdown("""
     <style>
         header[data-testid="stHeader"] { display: none; }
         .block-container { padding-top: 1rem; }
         section[data-testid="stSidebar"] .block-container { padding-top: 1rem; }
+        section[data-testid="stSidebar"] h1 { color: #FF4B4B; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -167,6 +186,18 @@ def load_station_context(station_id: str, year: int):
         return result.mappings().first()
 
 
+#Actual min/max backtest-able date - queried rather than hardcoded so the
+#Historical Explorer's date picker is correct whether pointed at the full
+#local database or a deployment with a trimmed history window.
+@st.cache_data
+def load_date_range():
+    engine = get_engine()
+    query = text("SELECT MIN(date_id) AS min_date, MAX(date_id) AS max_date FROM features_daily")
+    with engine.connect() as conn:
+        row = conn.execute(query).mappings().first()
+    return row["min_date"], row["max_date"]
+
+
 #Load the regressor's own validation MAE per horizon, so predicted
 #temperatures can be shown with an honest error bar instead of a bare number.
 @st.cache_data
@@ -180,15 +211,15 @@ def load_regressor_mae():
         return {}
 
 
-#map a probability to a risk band (colour / emoji / label / message)
+#map a probability to a risk band (colour / label / message)
 def risk_band(prob: float):
     if prob >= 0.75:
-        return "#ff4444", "🔴", "HIGH RISK",     "Extreme heat very likely"
+        return "#ff4444", "HIGH RISK",     "Extreme heat very likely"
     if prob >= 0.5:
-        return "#ff8800", "🟠", "ELEVATED RISK", "Conditions favour extreme heat"
+        return "#ff8800", "ELEVATED RISK", "Conditions favour extreme heat"
     if prob >= 0.3:
-        return "#ffcc00", "🟡", "MODERATE RISK", "Some chance of extreme heat"
-    return "#00cc44", "🟢", "LOW RISK", "Extreme heat unlikely"
+        return "#ffcc00", "MODERATE RISK", "Some chance of extreme heat"
+    return "#00cc44", "LOW RISK", "Extreme heat unlikely"
 
 
 #Clickable map of every station in stations_df, zoomed out to all of Canada.
@@ -303,7 +334,7 @@ def render_station_picker(stations_df: pd.DataFrame, key_prefix: str,
 
 
 def render_sidebar(num_fresh_stations: int, num_all_stations: int):
-    st.sidebar.title("🌡️ Canadian Extreme Heat Predictor")
+    st.sidebar.title("Canadian Extreme Heat Predictor")
     st.sidebar.markdown(
         "Predicts extreme-heat risk and expected daily high temperatures "
         "1-3 days ahead for Canadian weather stations, using an XGBoost "
@@ -322,7 +353,7 @@ def render_sidebar(num_fresh_stations: int, num_all_stations: int):
 #headline card: extreme heat somewhere in the next 3 days
 def render_window_card(window: dict):
     prob = window["probability"]
-    color, emoji, label, msg = risk_band(prob)
+    color, label, msg = risk_band(prob)
 
     st.markdown(f"""
         <div style="
@@ -335,7 +366,6 @@ def render_window_card(window: dict):
         ">
             <div style="font-size: 14px; letter-spacing: 1px;
                         color: #888;">EXTREME HEAT WITHIN 3 DAYS</div>
-            <div style="font-size: 48px">{emoji}</div>
             <div style="font-size: 28px; font-weight: bold;
                         color: {color};">{label}</div>
             <div style="font-size: 48px; font-weight: bold;
@@ -354,16 +384,16 @@ def render_horizon_strip(horizons: list, show_actual: bool = True,
     cols = st.columns(len(horizons))
     for col, h in zip(cols, horizons):
         prob = h["probability"]
-        color, emoji, label, _ = risk_band(prob)
+        color, label, _ = risk_band(prob)
         day_label = datetime.strptime(h["date"], "%Y-%m-%d").strftime("%a %b %d")
 
         if show_actual:
             if h["actual"] is None:
                 bottom_line = "actual: —"
             elif h["actual"] == 1:
-                bottom_line = "actual: Extreme ✓"
+                bottom_line = "actual: Extreme"
             else:
-                bottom_line = "actual: Normal ✓"
+                bottom_line = "actual: Normal"
         else:
             predicted = h.get("predicted_tmax")
             mae = (mae_by_horizon or {}).get(h["horizon"])
@@ -385,7 +415,6 @@ def render_horizon_strip(horizons: list, show_actual: bool = True,
                 ">
                     <div style="font-size: 13px; color: #888;">
                         Day +{h['horizon']} · {day_label}</div>
-                    <div style="font-size: 30px;">{emoji}</div>
                     <div style="font-size: 26px; font-weight: bold;
                                 color: {color};">{prob*100:.0f}%</div>
                     <div style="font-size: 12px; color: #888;">{label}</div>
@@ -508,7 +537,7 @@ def render_forecast_tab(fresh_stations_df: pd.DataFrame):
     as_of_date = datetime.strptime(result["as_of_date"], "%Y-%m-%d").date()
     age = result["data_age_days"]
 
-    age_msg = (f"📅 Latest data for **{station_name}**: **{as_of_date}** "
+    age_msg = (f"Latest data for **{station_name}**: **{as_of_date}** "
                f"({age} day{'s' if age != 1 else ''} old)")
     if age > 5:
         st.warning(age_msg + " — this station hasn't reported recently; "
@@ -566,17 +595,19 @@ def render_explorer_tab(all_stations_df: pd.DataFrame):
         f"model would have predicted, compared with what actually happened."
     )
 
+    min_date, max_date = load_date_range()
+    default_date = min(max(date(2021, 6, 27), min_date), max_date)
     selected_date = st.date_input(
         "Date",
-        value=date(2021, 6, 27),
-        min_value=date(1873, 1, 1),
-        max_value=date(2026, 8, 29),
+        value=default_date,
+        min_value=min_date,
+        max_value=max_date,
         key="explorer_date"
     )
-    predict_btn = st.button("🔍 Predict", type="primary", key="explorer_predict")
+    predict_btn = st.button("Predict", type="primary", key="explorer_predict")
 
     if not predict_btn:
-        st.info("👆 Pick a date, then click **Predict**.")
+        st.info("Pick a date, then click **Predict**.")
         return
 
     with st.spinner("Running prediction..."):
@@ -616,8 +647,8 @@ def render_explorer_tab(all_stations_df: pd.DataFrame):
         m3, m4 = st.columns(2)
         m3.metric("3-day risk", f"{window['probability']*100:.1f}%")
         m4.metric("Actual (next 3d)",
-                  "Extreme ✓" if window["actual"] == 1
-                  else ("Normal ✓" if window["actual"] == 0 else "—"))
+                  "Extreme" if window["actual"] == 1
+                  else ("Normal" if window["actual"] == 0 else "—"))
 
     # per-day strip
     st.markdown("---")
@@ -643,7 +674,7 @@ def main():
 
     render_sidebar(len(fresh_stations_df), len(all_stations_df))
 
-    tab_forecast, tab_explorer = st.tabs(["🔮 Live Forecast", "🕰️ Historical Explorer"])
+    tab_forecast, tab_explorer = st.tabs(["Live Forecast", "Historical Explorer"])
 
     with tab_forecast:
         render_forecast_tab(fresh_stations_df)
