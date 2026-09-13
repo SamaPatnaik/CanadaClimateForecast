@@ -1,3 +1,4 @@
+import os
 import joblib
 import numpy as np
 import pandas as pd
@@ -7,8 +8,12 @@ from fastapi import FastAPI, HTTPException
 from sqlalchemy import create_engine, text
 from typing import Optional
 
-# add this to config.py
-DB_URL = "postgresql://climate:climate123@localhost:5433/climate_dw"
+# DATABASE_URL is set by the host in deployment (Render/Railway/etc.);
+# falls back to the local Docker Postgres for local development.
+DB_URL = os.environ.get(
+    "DATABASE_URL",
+    "postgresql://climate:climate123@localhost:5433/climate_dw"
+)
 MODEL_DIR = Path("modeling/saved_models")
 HORIZON_MODEL_PATH = MODEL_DIR / "xgb_extreme_heat_h3.joblib"
 WINDOW_MODEL_PATH  = MODEL_DIR / "xgb_extreme_window3.joblib"
