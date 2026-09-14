@@ -63,20 +63,12 @@ st.set_page_config(
 #the sidebar title uses the same orange-red as Streamlit's active-tab
 #indicator (its default theme's primaryColor, #FF4B4B - no custom theme
 #is configured in this project, so that's the color actually shown)
-#"Station context", "Day by day outlook", and the tab labels are unified
-#to the same larger size (2rem) - bigger than Streamlit's defaults for
-#each, but still smaller than the sidebar title's h1 size, so the title
-#stays visually the largest element on the page.
 st.markdown("""
     <style>
         header[data-testid="stHeader"] { display: none; }
         .block-container { padding-top: 1rem; }
         section[data-testid="stSidebar"] .block-container { padding-top: 1rem; }
         section[data-testid="stSidebar"] h1 { color: #FF4B4B; }
-        .section-heading { font-size: 2rem; font-weight: 600; margin: 0.5rem 0; }
-        .stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {
-            font-size: 2rem;
-        }
     </style>
 """, unsafe_allow_html=True)
 
@@ -394,7 +386,7 @@ def render_window_card(window: dict):
 #show_actual=False (Live Forecast) shows the regressor's predicted temperature.
 def render_horizon_strip(horizons: list, show_actual: bool = True,
                           mae_by_horizon: dict = None):
-    st.markdown('<p class="section-heading">Day by day outlook</p>', unsafe_allow_html=True)
+    st.markdown("#### Day by day outlook")
     cols = st.columns(len(horizons))
     for col, h in zip(cols, horizons):
         prob = h["probability"]
@@ -492,7 +484,7 @@ def render_history_chart(history_df: pd.DataFrame,
         ))
 
     fig.update_layout(
-        title="60 day temperature history and 3 day outlook",
+        title="10 day temperature history and 3 day outlook",
         xaxis_title="Date",
         yaxis_title="Max Temperature (°C)",
         legend=dict(orientation="h", y=-0.35, yanchor="top"),
@@ -506,7 +498,7 @@ def render_history_chart(history_df: pd.DataFrame,
 def render_station_context(station_id: str, year: int):
     ctx = load_station_context(station_id, year)
     if ctx:
-        st.markdown('<p class="section-heading">Station context</p>', unsafe_allow_html=True)
+        st.markdown("### Station context")
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("Extreme days this year",
                   ctx["extreme_this_year"] or 0)
