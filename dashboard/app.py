@@ -63,12 +63,20 @@ st.set_page_config(
 #the sidebar title uses the same orange-red as Streamlit's active-tab
 #indicator (its default theme's primaryColor, #FF4B4B - no custom theme
 #is configured in this project, so that's the color actually shown)
+#"Station context", "Day by day outlook", and the tab labels are unified
+#to the same larger size (1.4rem) - bigger than Streamlit's defaults for
+#each, but still smaller than the sidebar title's h1 size, so the title
+#stays visually the largest element on the page.
 st.markdown("""
     <style>
         header[data-testid="stHeader"] { display: none; }
         .block-container { padding-top: 1rem; }
         section[data-testid="stSidebar"] .block-container { padding-top: 1rem; }
         section[data-testid="stSidebar"] h1 { color: #FF4B4B; }
+        .section-heading { font-size: 1.4rem; font-weight: 600; margin: 0.5rem 0; }
+        .stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {
+            font-size: 1.4rem;
+        }
     </style>
 """, unsafe_allow_html=True)
 
@@ -140,9 +148,16 @@ def load_forecast_ready_stations(max_age_days: int = FORECAST_MAX_AGE_DAYS,
         })
 
 
-#Load last 60 days of tmax + the p95 threshold for this station.
+#Load the 60 calendar days up to and including anchor_date (the live
+#as_of_date, or the Historical Explorer's selected_date) - filtered by
+#actual date range, not just "the last 60 rows with data". A station can
+#have a long reporting gap (rows exist, just not within 60 real days of
+#each other); grabbing the last 60 available rows regardless of gap size
+#would pull in data from years earlier, and the chart would draw one
+#straight line across the whole gap since Plotly just connects whatever
+#points are in the dataframe.
 @st.cache_data
-def load_station_history(station_id: str):
+def load_station_history(station_id: str, anchor_date: date):
     engine = get_engine()
     query = text("""
         SELECT
@@ -154,12 +169,11 @@ def load_station_history(station_id: str):
             tmax_anomaly
         FROM features_daily
         WHERE station_id = :sid
-        ORDER BY date_id DESC
-        LIMIT 60
+          AND date_id BETWEEN :anchor_date - INTERVAL '60 days' AND :anchor_date
+        ORDER BY date_id
     """)
     with engine.connect() as conn:
-        df = pd.read_sql(query, conn, params={"sid": station_id})
-    return df.sort_values("date_id")
+        return pd.read_sql(query, conn, params={"sid": station_id, "anchor_date": anchor_date})
 
 
 #Station-level stats for context panel.
@@ -380,7 +394,7 @@ def render_window_card(window: dict):
 #show_actual=False (Live Forecast) shows the regressor's predicted temperature.
 def render_horizon_strip(horizons: list, show_actual: bool = True,
                           mae_by_horizon: dict = None):
-    st.markdown("#### Day by day Outlook")
+    st.markdown('<p class="section-heading">Day by day outlook</p>', unsafe_allow_html=True)
     cols = st.columns(len(horizons))
     for col, h in zip(cols, horizons):
         prob = h["probability"]
@@ -483,7 +497,7 @@ def render_history_chart(history_df: pd.DataFrame,
         yaxis_title="Max Temperature (°C)",
         legend=dict(orientation="h", y=-0.35, yanchor="top"),
         height=380,
-        margin=dict(t=40, b=90)
+        margin=dict(t=40, b=75)
     )
 
     st.plotly_chart(fig, use_container_width=True)
@@ -492,7 +506,7 @@ def render_history_chart(history_df: pd.DataFrame,
 def render_station_context(station_id: str, year: int):
     ctx = load_station_context(station_id, year)
     if ctx:
-        st.markdown("### Station context")
+        st.markdown('<p class="section-heading">Station context</p>', unsafe_allow_html=True)
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("Extreme days this year",
                   ctx["extreme_this_year"] or 0)
@@ -540,7 +554,7 @@ def render_forecast_tab(fresh_stations_df: pd.DataFrame):
     age_msg = (f"Latest data for **{station_name}**: **{as_of_date}** "
                f"({age} day{'s' if age != 1 else ''} old)")
     if age > 5:
-        st.warning(age_msg + "This station hasn't reported recently; "
+        st.warning(age_msg + " This station hasn't reported recently; "
                    "the forecast below is only as current as this date.")
     else:
         st.info(age_msg)
@@ -571,7 +585,7 @@ def render_forecast_tab(fresh_stations_df: pd.DataFrame):
 
     # history chart
     st.markdown("---")
-    history = load_station_history(station_id)
+    history = load_station_history(station_id, as_of_date)
     if not history.empty:
         render_history_chart(history,
                               result["p95_tmax"],
@@ -656,7 +670,7 @@ def render_explorer_tab(all_stations_df: pd.DataFrame):
 
     # history chart
     st.markdown("---")
-    history = load_station_history(station_id)
+    history = load_station_history(station_id, selected_date)
     if not history.empty:
         render_history_chart(history,
                               result["p95_tmax"],
