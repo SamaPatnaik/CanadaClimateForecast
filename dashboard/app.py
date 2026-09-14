@@ -64,7 +64,7 @@ st.set_page_config(
 #indicator (its default theme's primaryColor, #FF4B4B - no custom theme
 #is configured in this project, so that's the color actually shown)
 #"Station context", "Day by day outlook", and the tab labels are unified
-#to the same larger size (1.4rem) - bigger than Streamlit's defaults for
+#to the same larger size (2rem) - bigger than Streamlit's defaults for
 #each, but still smaller than the sidebar title's h1 size, so the title
 #stays visually the largest element on the page.
 st.markdown("""
@@ -73,9 +73,9 @@ st.markdown("""
         .block-container { padding-top: 1rem; }
         section[data-testid="stSidebar"] .block-container { padding-top: 1rem; }
         section[data-testid="stSidebar"] h1 { color: #FF4B4B; }
-        .section-heading { font-size: 1.4rem; font-weight: 600; margin: 0.5rem 0; }
+        .section-heading { font-size: 2rem; font-weight: 600; margin: 0.5rem 0; }
         .stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {
-            font-size: 1.4rem;
+            font-size: 2rem;
         }
     </style>
 """, unsafe_allow_html=True)
