@@ -116,7 +116,6 @@ The deployed app runs against a trimmed copy of the database (2018 onward, to fi
 
 ---
 
-## Running it yourself
 
 ## Running it yourself
 
